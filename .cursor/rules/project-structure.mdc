@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Main Project Structure
+Frontend는 항상 Root project에서 frontend 폴더 내에서 진행되며, 
+Backend는 항상 Root project에서 backend 폴더 내에서 진행된다.
+
+## Frontend
+
+## Backend
