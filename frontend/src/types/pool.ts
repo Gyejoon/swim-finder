@@ -32,4 +32,4 @@ export interface Pool {
   imageUrl: string[];
   status: PoolStatus;
   createdAt: string;
-} 
+}
