@@ -1,20 +1,9 @@
 'use client';
 
 import Script from 'next/script';
-import { useRef, useState } from 'react';
-
-// 카카오맵 타입 정의
-declare global {
-  interface Window {
-    kakao: {
-      maps: {
-        Map: new (container: HTMLElement, options: MapOptions) => Map;
-        LatLng: new (lat: number, lng: number) => LatLng;
-        load: (callback: () => void) => void;
-      };
-    };
-  }
-}
+import { useRef, useState, useMemo } from 'react';
+import MarkerManager from './MarkerManager';
+import useMapStore from '@/store/mapStore';
 
 interface MapOptions {
   center: LatLng;
@@ -26,23 +15,28 @@ interface LatLng {
   getLng: () => number;
 }
 
-interface Map {
-  setCenter: (latlng: LatLng) => void;
-  setZoom: (level: number) => void;
-  getCenter: () => LatLng;
-  getZoom: () => number;
-}
-
 export default function MapContainer() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [map, setMap] = useState<kakao.maps.Map | null>(null);
+  
+  const { pools, filters, setSelectedPool } = useMapStore();
+
+  // 필터링된 수영장 목록
+  const filteredPools = useMemo(() => {
+    return pools.filter(pool => {
+      if (filters.isPublic !== null && pool.isPublic !== filters.isPublic) return false;
+      if (filters.hasWeekendFreeSwim && !pool.hasWeekendFreeSwim) return false;
+      if (filters.hasLesson && !pool.hasLesson) return false;
+      if (filters.priceRange && pool.priceRange !== filters.priceRange) return false;
+      return true;
+    });
+  }, [pools, filters]);
 
   // 지도 초기화
   const initializeMap = () => {
-    console.log('initializeMap called');
     if (!window.kakao?.maps) {
-      console.error('Kakao maps not loaded');
       setError('카카오맵 SDK가 로드되지 않았습니다.');
       setIsLoading(false);
       return;
@@ -50,7 +44,6 @@ export default function MapContainer() {
 
     const container = mapRef.current;
     if (!container) {
-      console.error('Map container not found');
       setError('지도 컨테이너가 없습니다.');
       setIsLoading(false);
       return;
@@ -61,7 +54,8 @@ export default function MapContainer() {
         center: new window.kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 좌표
         level: 7,
       };
-      new window.kakao.maps.Map(container, options);
+      const kakaoMap = new window.kakao.maps.Map(container, options);
+      setMap(kakaoMap);
     } catch (err) {
       console.error('Map initialization error:', err);
       setError('지도 초기화에 실패했습니다.');
@@ -102,6 +96,11 @@ export default function MapContainer() {
       )}
       
       <div ref={mapRef} className="w-full h-full" />
+      <MarkerManager 
+        pools={filteredPools}
+        onMarkerClick={setSelectedPool}
+        map={map}
+      />
     </div>
   );
 } 
